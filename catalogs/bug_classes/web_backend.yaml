@@ -1,0 +1,125 @@
+# Bug-class catalog for web backend domain.
+# Used by test_construction mode STEP 3 (bug_class_gaps) and by review mode
+# C1 (correctness) test design.
+#
+# Each entry describes a class of defects, a way to probe for it, and
+# domain-typical severity. Severity is a default; mode-specific config
+# may override.
+
+version: 1
+domain: web_backend
+
+classes:
+
+  - id: off_by_one
+    description: Boundary/index miscalculation on collections, ranges, pagination
+    probe:
+      - "Test list operations at sizes 0, 1, 2, n-1, n, n+1"
+      - "Pagination at exact page boundary"
+    severity: 0.85
+
+  - id: null_empty
+    description: Missing handling for None / empty string / empty collection
+    probe:
+      - "Pass None, '', [], {}, set() to every public function"
+    severity: 0.85
+
+  - id: unicode
+    description: Encoding issues, RTL text, emoji, combining characters
+    probe:
+      - "Inputs: '中文', '👨‍👩‍👧', 'مرحبا', 'café', '', '\\x00'"
+    severity: 0.70
+
+  - id: time_timezone
+    description: TZ-naive vs aware datetimes, DST transitions, leap seconds
+    probe:
+      - "Datetimes in UTC, local, and arbitrary offsets"
+      - "DST transition dates"
+    severity: 0.75
+
+  - id: concurrency
+    description: Race conditions, deadlocks, lost updates
+    probe:
+      - "Concurrent writes to same resource"
+      - "Reader-writer contention under load"
+    severity: 0.90
+
+  - id: auth_authz
+    description: Authentication bypass, authorization escalation
+    probe:
+      - "Missing token, expired token, tampered token"
+      - "Cross-user resource access"
+      - "Role downgrade attacks"
+    severity: 0.95
+
+  - id: injection
+    description: SQL, NoSQL, command, header, template injection
+    probe:
+      - "Inputs with SQL syntax, shell metachars, template syntax"
+      - "Unicode normalization smuggling"
+    severity: 0.95
+
+  - id: deserialization
+    description: Unsafe deserialization of untrusted data
+    probe:
+      - "Pickle, YAML.unsafe_load, JSON with __proto__"
+    severity: 0.95
+
+  - id: ssrf
+    description: Server-side request forgery
+    probe:
+      - "URLs pointing to localhost, link-local, internal IPs"
+      - "DNS rebinding"
+    severity: 0.90
+
+  - id: rate_limit
+    description: Missing or bypassable rate limits
+    probe:
+      - "Rapid repeated requests"
+      - "Distributed requests across IPs"
+    severity: 0.70
+
+  - id: resource_exhaustion
+    description: Memory/CPU/disk exhaustion on adversarial input
+    probe:
+      - "Very large inputs (1MB, 10MB)"
+      - "Deeply nested JSON/XML"
+      - "Pathological regex (ReDoS)"
+    severity: 0.80
+
+  - id: error_disclosure
+    description: Stack traces or PII leaked in error responses
+    probe:
+      - "Trigger handled errors at every endpoint, inspect response body"
+    severity: 0.60
+
+  - id: integer_overflow
+    description: Silent wrap or precision loss on large numbers
+    probe:
+      - "Inputs near 2^31, 2^53, 2^63"
+    severity: 0.65
+
+  - id: floating_point
+    description: Comparison with ==, NaN, Inf, denormals
+    probe:
+      - "NaN, ±Inf, very small denormals"
+      - "Equality after arithmetic"
+    severity: 0.55
+
+  - id: caching_stale
+    description: Stale cache served after invalidation event
+    probe:
+      - "Read after write under cache; cache TTL boundary"
+    severity: 0.70
+
+  - id: api_contract_drift
+    description: Breaking change to public API without version bump
+    probe:
+      - "OpenAPI schema diff, response shape diff"
+    severity: 0.75
+
+  - id: idempotency
+    description: Non-idempotent operations triggered twice
+    probe:
+      - "Retry a write, assert single side-effect"
+    severity: 0.70

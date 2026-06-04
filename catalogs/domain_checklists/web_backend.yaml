@@ -1,0 +1,68 @@
+# Domain checklist for verification mode V4 (implicit requirements).
+# A task to "add feature X" implicitly requires the items below;
+# verification mode flags any unaddressed item.
+
+version: 1
+domain: web_backend
+
+implicit_requirements:
+
+  - id: changelog
+    description: User-visible changes have a CHANGELOG entry
+    applies_when: ["feature", "bugfix", "breaking_change"]
+    detector: "git diff CHANGELOG.md or equivalent"
+    severity: 0.60
+
+  - id: migration
+    description: Schema changes have a migration script and rollback notes
+    applies_when: ["schema_change"]
+    detector: "presence of new migration file matching change"
+    severity: 0.90
+
+  - id: api_versioning
+    description: Breaking API changes bump the API version
+    applies_when: ["api_breaking_change"]
+    detector: "OpenAPI version bump or route prefix change"
+    severity: 0.85
+
+  - id: monitoring
+    description: New code paths have logging at info+, metrics for hot paths
+    applies_when: ["feature", "perf"]
+    detector: "log/metric calls in changed files"
+    severity: 0.50
+
+  - id: docs
+    description: Public API or user-facing behavior documented
+    applies_when: ["feature", "api_change"]
+    detector: "docs/ updated for changed symbols"
+    severity: 0.60
+
+  - id: security_review_flag
+    description: Auth/data-handling changes flagged for security review
+    applies_when: ["auth_change", "data_handling_change"]
+    detector: "PR label 'security-review' or equivalent"
+    severity: 0.90
+
+  - id: dependency_license
+    description: New dependencies have compatible licenses
+    applies_when: ["dependency_added"]
+    detector: "license check tool on new entries in lockfile"
+    severity: 0.70
+
+  - id: secrets_scan
+    description: No secrets committed
+    applies_when: ["any"]
+    detector: "secrets scanner (e.g., trufflehog, gitleaks) on diff"
+    severity: 0.95
+
+  - id: test_coverage_for_new_branches
+    description: Newly introduced branches have at least one test each
+    applies_when: ["any"]
+    detector: "coverage diff on new branches"
+    severity: 0.75
+
+  - id: backward_compat_for_public_api
+    description: Public API symbols not removed or renamed without deprecation
+    applies_when: ["api_change"]
+    detector: "symbol diff vs released API surface"
+    severity: 0.85

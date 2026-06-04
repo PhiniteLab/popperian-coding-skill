@@ -1,0 +1,76 @@
+# Mutation operators for test-construction mode STEP 5.
+# Subset chosen to align with the bug-class catalogue rather than just
+# arithmetic flips. Used to compute mutation_score in the suite quality
+# report. Defaults follow mutmut (https://mutmut.readthedocs.io/) with
+# additions noted.
+
+version: 1
+
+operators:
+
+  - id: arith_op
+    description: Replace +, -, *, /, %, // with each other
+    targets: ["off_by_one", "integer_overflow"]
+    default_enabled: true
+
+  - id: comparison_op
+    description: Replace <, <=, >, >=, ==, != with each other
+    targets: ["off_by_one"]
+    default_enabled: true
+
+  - id: bool_op
+    description: Replace and ↔ or
+    targets: ["auth_authz"]
+    default_enabled: true
+
+  - id: const_replace
+    description: Replace integer/float constants with 0, 1, -1, max, min
+    targets: ["off_by_one", "integer_overflow"]
+    default_enabled: true
+
+  - id: cond_negate
+    description: Negate every if condition
+    targets: ["auth_authz", "null_empty"]
+    default_enabled: true
+
+  - id: return_mutate
+    description: Replace return value with None / empty / default
+    targets: ["null_empty"]
+    default_enabled: true
+
+  - id: del_statement
+    description: Delete a non-side-effect statement (where applicable)
+    targets: ["all"]
+    default_enabled: true
+
+  - id: exception_catch_drop
+    description: Replace `except E:` with `except:` (broaden) — surfaces
+                 over-catching tests that pass either way
+    targets: ["error_disclosure"]
+    default_enabled: true
+
+  - id: slice_boundary
+    description: Mutate slice boundaries by ±1
+    targets: ["off_by_one"]
+    default_enabled: true
+
+  - id: container_swap
+    description: list ↔ tuple, dict ↔ OrderedDict where typing allows
+    targets: ["caching_stale"]
+    default_enabled: false   # noisy; enable per project
+
+  - id: string_concat_swap
+    description: Swap order in string concatenation; surfaces tests
+                 that don't depend on content ordering
+    targets: ["api_contract_drift"]
+    default_enabled: true
+
+sampling:
+  strategy: stratified            # one per operator first, then random
+  max_mutants_per_file: 50
+  per_class_minimum: 2            # at least 2 mutants from operators
+                                  # targeting each enabled bug class
+
+reporting:
+  surviving_threshold: 0.30       # if > 30% mutants survive, fail T1
+  killed_required_per_class: 0.80 # within each targeted class, 80% killed
