@@ -1,4 +1,17 @@
-# popperian-coding
+# scaffold-skill
+
+> On disagreement between this README and [`PAPER.yml`](PAPER.yml), `PAPER.yml` wins.
+
+| bucket | arXiv | role | former names | former GitHub slug |
+|---|---|---|---|---|
+| published | [2606.06454](https://arxiv.org/abs/2606.06454) | studied-artifact | popperian-coding-skill | PhiniteLab/popperian-coding-skill |
+
+This repository is named **scaffold-skill**. The Claude Agent Skill it contains
+keeps its own registered identity, **`popperian-coding`** (see `SKILL.md`'s
+`name:` field) — that identity is frozen because a byte-identical copy of the
+skill is vendored into the companion evaluation repository, and it is the name
+under which the companion paper studies and reports on the skill. The two
+names are deliberately different: **repo = scaffold-skill, skill = popperian-coding.**
 
 A Claude **coding skill** that switches a code agent from *verification*
 ("does my answer look right?") to *falsification* ("what severe test would break
@@ -36,10 +49,14 @@ best-effort guess.
 ## Using it with Claude
 
 This is a [Claude Agent Skill](https://docs.claude.com/en/docs/claude-code/skills).
-Place the directory under your skills location (for example
-`~/.claude/skills/popperian-coding/`) so that `SKILL.md` and its `modes/`,
-`scripts/`, and `catalogs/` sit together. The agent enters the appropriate mode
-through the `mode_router` patterns declared in `SKILL.md`.
+Place the directory under your skills location — named after the **skill's**
+registered identity (`SKILL.md`'s `name: popperian-coding`), not after this
+**repository's** name — for example `~/.claude/skills/popperian-coding/`, so
+that `SKILL.md` and its `modes/`, `scripts/`, and `catalogs/` sit together.
+The install directory name must match `SKILL.md`'s `name:` field exactly; it
+is unrelated to the fact that this repository itself is called
+`scaffold-skill`. The agent enters the appropriate mode through the
+`mode_router` patterns declared in `SKILL.md`.
 
 ## Companion paper
 
@@ -61,7 +78,7 @@ an evaluation of Popperian methodology in general. We release the skill so that
 the result can be reproduced and the controlled-evaluation protocol
 (placebo + labels-only + execution oracle + halo sentinel) re-used.
 
-A link to the preprint will be added here on release.
+Preprint: [arXiv:2606.06454](https://arxiv.org/abs/2606.06454).
 
 ## License
 

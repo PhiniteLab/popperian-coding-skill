@@ -1,0 +1,28 @@
+# ---- collection shared block (do not remove) ----
+.venv/
+.env
+.env.*
+runs/
+artifacts/
+**/literature/pdfs/
+ownerDocs/myLiterature/pdfs/
+**/*.safetensors
+**/*.pt
+.hypothesis/
+
+# LaTeX byproducts
+*.aux
+*.log
+*.out
+*.fls
+*.fdb_latexmk
+*.bcf
+*.run.xml
+# ---- end collection shared block ----
+
+# Python
+__pycache__/
+*.pyc
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/

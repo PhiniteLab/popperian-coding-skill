@@ -1,0 +1,59 @@
+cff-version: 1.2.0
+message: >-
+  If you use this skill or reproduce its evaluation, please cite the
+  preferred-citation paper below; cite this repository release for the
+  skill artifact itself.
+title: "scaffold-skill: the popperian-coding Claude Agent Skill (falsification-over-verification coding scaffold)"
+type: software
+authors:
+  - family-names: Iscan
+    given-names: Mehmet
+    affiliation: "PythaLab, Yildiz Technical University"
+repository-code: "https://github.com/PhiniteLab/scaffold-skill"
+url: "https://github.com/PhiniteLab/scaffold-skill"
+abstract: >-
+  A Claude Agent Skill (registered name popperian-coding) that switches a
+  coding agent from verification ("does my answer look right?") to
+  falsification ("what severe test would break my answer if it were
+  wrong?") across four coding modes, enforcing six invariants: explicit
+  conjecture inventory, mandatory severity scores, oracle independence, an
+  MDL-based ad-hoc-rescue blocker, abstention as a first-class outcome, and
+  a versioned run trace. Released as the studied artifact of a controlled,
+  pre-registered evaluation reported in the preferred-citation paper below.
+keywords:
+  - popperian-falsification
+  - claude-agent-skill
+  - llm-coding-agents
+  - code-review
+  - code-generation
+  - test-construction
+  - task-verification
+  - reproducible-evaluation
+license: MIT
+version: "0.1.0"
+date-released: "2026-06-04"
+identifiers:
+  - type: other
+    value: "arXiv:2606.06454"
+    description: arXiv identifier of the companion evaluation paper
+  - type: doi
+    value: "10.48550/arXiv.2606.06454"
+    description: arXiv DOI of the companion evaluation paper
+preferred-citation:
+  type: article
+  title: >-
+    Scaffold, Not Vocabulary? A Controlled, Two-Tier, Pre-Registered Study of
+    a Popperian Code-Generation Skill
+  authors:
+    - family-names: Iscan
+      given-names: Mehmet
+      affiliation: "PythaLab, Yildiz Technical University"
+  year: 2026
+  journal: arXiv preprint
+  identifiers:
+    - type: other
+      value: "arXiv:2606.06454"
+      description: arXiv identifier
+    - type: doi
+      value: "10.48550/arXiv.2606.06454"
+      description: arXiv DOI
