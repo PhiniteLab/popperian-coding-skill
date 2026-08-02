@@ -1,14 +1,11 @@
-# Machine-readable identity card. Greppable across the whole collection.
-# On disagreement with README.md or CITATION.cff, THIS FILE WINS.
 name: scaffold-skill
 bucket: published
-arxiv_id: "2606.06454"
-doi: "10.48550/arXiv.2606.06454"
-title: >-
-  Scaffold, Not Vocabulary? A Controlled, Two-Tier, Pre-Registered Study of a
-  Popperian Code-Generation Skill
+arxiv_id: '2606.06454'
+doi: 10.48550/arXiv.2606.06454
+title: Scaffold, Not Vocabulary? A Controlled, Two-Tier, Pre-Registered Study of a Popperian Code-Generation
+  Skill
 authors:
-  - Mehmet Iscan
+- Mehmet Iscan
 venue: arXiv preprint
 status: published
 role: studied-artifact
@@ -17,49 +14,35 @@ latex_home: null
 code_home: .
 install_home: ~/.claude/skills/popperian-coding/
 former_names:
-  - popperian-coding-skill
+- popperian-coding-skill
 former_github_slugs:
-  - PhiniteLab/popperian-coding-skill
+- PhiniteLab/popperian-coding-skill
 companions:
-  - name: exec-refute
-    where: ~/github/manuscripts/published/exec-refute
-    why: >-
-      the controlled-evaluation harness that studies this skill as its object;
-      vendors a byte-identical copy at
-      popperian_coding/skill/SKILL.md and holds the compiled paper PDF at
-      makale1.pdf (no LaTeX source alongside it).
+- name: exec-refute
+  where: ~/github/manuscripts/published/exec-refute
+  why: the controlled-evaluation harness that studies this skill as its object; vendors a byte-identical
+    copy at popperian_coding/skill/SKILL.md and holds the compiled paper PDF at makale1.pdf (no LaTeX
+    source alongside it).
 supersedes: []
 superseded_by: []
 frozen_strings:
-  - "SKILL.md:2 `name: popperian-coding` — the skill's REGISTERED IDENTITY,
-    read by the Claude Agent Skills loader. Never renamed, even though the
-    containing repository was renamed from popperian-coding-skill to
-    scaffold-skill. A byte-identical copy is vendored at
-    published/exec-refute/popperian_coding/skill/SKILL.md; changing this
-    name here without updating that vendored copy (and every ablation
-    fixture under exec-refute/tests/manual/) would desynchronize the
-    evaluated artifact from the one this repository publishes."
-  - "README.md install path `~/.claude/skills/popperian-coding/` — frozen
-    because it must match SKILL.md's name: field above, not because it is a
-    repository identity string. The surrounding prose was rewritten to
-    clarify that the REPO is scaffold-skill while the SKILL it contains is
-    named popperian-coding; the path itself is untouched."
-notes: >-
-  Deliberate name mismatch: this repository was renamed scaffold-skill /
-  PhiniteLab/scaffold-skill, but the skill it contains keeps its registered
-  identity `popperian-coding` (SKILL.md name: field) because that identity
-  is vendored byte-identical into published/exec-refute (the evaluation
-  harness) and is the name under which the companion paper studied and
-  reports on the skill. Renaming it would break the vendored copy's
-  provenance and silently desynchronize the studied artifact from what this
-  repo publishes.
+- popperian-coding
+notes: 'Deliberate name mismatch: this repository was renamed scaffold-skill / PhiniteLab/scaffold-skill,
+  but the skill it contains keeps its registered identity `popperian-coding` (SKILL.md name: field) because
+  that identity is vendored byte-identical into published/exec-refute (the evaluation harness) and is
+  the name under which the companion paper studied and reports on the skill. Renaming it would break the
+  vendored copy''s provenance and silently desynchronize the studied artifact from what this repo publishes.
 
 
-  Known gap, recorded rather than concealed: role is studied-artifact and
-  paper_of_record is deliberately false. No LaTeX source for arXiv:2606.06454
-  exists anywhere on disk in this collection as of 2026-08-02 — only a
-  compiled PDF at published/exec-refute/makale1.pdf, with no .tex/.bib
-  alongside it. latex_home is therefore null rather than pointing at a
-  source tree that does not exist. If the LaTeX source surfaces later,
-  update latex_home and reconsider paper_of_record together with whichever
-  repo turns out to hold it (most likely published/exec-refute).
+  Known gap, recorded rather than concealed: role is studied-artifact and paper_of_record is deliberately
+  false. No LaTeX source for arXiv:2606.06454 exists anywhere on disk in this collection as of 2026-08-02
+  — only a compiled PDF at published/exec-refute/makale1.pdf, with no .tex/.bib alongside it. latex_home
+  is therefore null rather than pointing at a source tree that does not exist. If the LaTeX source surfaces
+  later, update latex_home and reconsider paper_of_record together with whichever repo turns out to hold
+  it (most likely published/exec-refute).
+
+
+  frozen_strings note: the repository is scaffold-skill but the SKILL it ships is registered as `popperian-coding`
+  (SKILL.md:2), and it installs to ~/.claude/skills/popperian-coding/. That mismatch is deliberate: the
+  name is the skill''s identity as read by the Agent Skills loader, and a byte-identical copy is vendored
+  inside published/exec-refute. Renaming either would desynchronise them.'

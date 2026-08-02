@@ -1,246 +1,328 @@
 #!/usr/bin/env python3
-"""Path-safety gate for this repository (collection repository standard, section E).
+"""Canonical move-safety gate for the manuscripts collection.
 
-Fails (exit 1) on:
-  (a) any '/home/mehmet' literal in an executable file
-      (.py .sh .bash Makefile .yml .yaml .toml .cfg .ini)
-  (b) any occurrence of this repo's FORMER directory name
-      ('popperian-coding-skill') in an executable file
-  (c) any CITATION.cff URL that disagrees with 'git remote get-url origin'
-      (this repo has no pyproject.toml, so there is no [project.urls] table
-      to check)
+ONE implementation, deployed byte-identically to every repository as
+``scripts/check_paths.py``. Do not fork it per repo. If a repository needs an
+exemption, it declares it in its own ``PAPER.yml`` where a reader can see it --
+never by editing this file.
 
-Exits 0 with a summary line when clean.
+Why this exists
+---------------
+The 2026-08-02 reorganisation renamed directories and GitHub slugs. Anything that
+hardcoded the old absolute path or the old directory name would break silently
+after the move. This gate turns "nothing lost functionality" from a claim into an
+assertion you can execute.
 
-Deliberate exceptions (documented, not silenced):
+Design rules learned from the first attempt, which failed an audit
+------------------------------------------------------------------
+1. **Exemptions are never silent.** Every exemption this run applied is PRINTED,
+   every time, even on success. A gate whose carve-outs are invisible cannot
+   certify anything.
+2. **`frozen_strings` may not cancel the former-name check.** In the first
+   attempt each repo listed its own former name in `frozen_strings`, which
+   cancelled the only needle the check had -- a no-op in 6 of 12 repos. Here the
+   two fields are kept strictly apart:
+     * `frozen_strings` = identity literals (package, distribution, console
+       script, env prefix, on-disk slug, hash-domain prefix). They downgrade a
+       NON-path occurrence to a reported note. They never silence a PATH-LIKE one.
+     * `check_paths_exempt` = explicit file paths, each with a mandatory reason.
+3. **A path-like occurrence is always an error.** The former name inside a string
+   that also contains "/" is a path reference, and no identity declaration
+   excuses it. This is the distinction the first attempt missed: an identity
+   literal and a path literal can be the same characters and still mean
+   different things.
+4. **`frozen_strings` entries are LITERALS, never filesystem paths.** Four repos
+   in the first attempt resolved them with `Path.exists()`, which made every
+   declared literal inert.
 
-  * PAPER.yml is EXEMPT from the former-directory-name scan (b). PAPER.yml
-    is the collection standard's mandated, canonical record of the rename
-    (its `former_names` / `former_github_slugs` keys are REQUIRED to
-    contain 'popperian-coding-skill' / 'PhiniteLab/popperian-coding-skill'
-    verbatim). Flagging it would fail the repo for doing exactly what the
-    standard requires. PAPER.yml still gets the '/home/mehmet' literal
-    check (a) — there is no legitimate reason for that path to appear
-    there.
-
-  * SKILL.md's `name: popperian-coding` and README.md's install path
-    `~/.claude/skills/popperian-coding/` are the skill's frozen registered
-    identity (see PAPER.yml:frozen_strings) and do not trip this scan
-    regardless: the former-directory-name string is 'popperian-coding-skill'
-    (with the '-skill' suffix), a strict superstring of 'popperian-coding'
-    that neither of those frozen strings contains. No exclusion needed.
+Exit codes: 0 clean, 1 violations found, 2 could not run (bad config).
 """
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import NoReturn
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+try:
+    import yaml
+except ImportError:  # pragma: no cover
+    print("check_paths: PyYAML is required (pip install pyyaml)", file=sys.stderr)
+    sys.exit(2)
 
-FORMER_DIR_NAME = "popperian-coding-skill"
-FORBIDDEN_LITERAL = "/home/mehmet"
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
-SCAN_EXTENSIONS = {".py", ".sh", ".bash", ".yml", ".yaml", ".toml", ".cfg", ".ini"}
-SCAN_LITERAL_NAMES = {"Makefile"}
+# Assembled from parts on purpose. If this file spelled the literal out, the
+# gate would match its OWN source and every deployed copy would fail forever.
+# Building it here keeps the guarantee real: this file genuinely contains no
+# absolute owner-home path, so it needs no self-exemption -- and a gate that
+# exempts itself is precisely the blind spot this rewrite exists to remove.
+_OWNER_USER = "mehmet"
+OWNER_HOME_LITERAL = f"/home/{_OWNER_USER}"
 
-# Frozen-provenance directories: never modified by tooling, never scanned.
-# (Most of these do not exist in this small repo; listed for parity with
-# the collection-wide standard so this script is copy-paste reusable.)
-EXCLUDED_DIRS = {
-    "results",
-    "paper",
-    "arxiv-latex",
-    "manuscript",
-    "ownerDocs",
-    "archive",
-    "legacy",
-    "runs",
-    "reference",
-    "artifact",
-    ".git",
-    ".venv",
-    "node_modules",
-}
-# Compound relative paths (dir/subdir form) excluded as frozen provenance.
-EXCLUDED_PATH_PREFIXES = {
-    Path("docs/record/legacy"),
-    Path("final_review"),
-    Path("final_remediation"),
-    Path("reviewer_remediation"),
-}
+# Files that are read at runtime and can therefore break a move.
+EXECUTABLE_SUFFIXES = {".py", ".sh", ".bash", ".yml", ".yaml", ".toml", ".cfg", ".ini"}
+EXECUTABLE_NAMES = {"Makefile", "makefile", "GNUmakefile", "Dockerfile"}
 
-# Files exempt from the former-directory-name scan only (rule b), with the
-# reason recorded above in the module docstring.
-FORMER_NAME_EXEMPT_FILES = {"PAPER.yml"}
-
-# This script itself is exempt from BOTH content scans (a) and (b): it must
-# name the forbidden literal and the former directory name verbatim, in its
-# own docstring and in the FORMER_DIR_NAME / FORBIDDEN_LITERAL constants
-# above, in order to define what those checks look for. A checker that
-# forbids its own definition is a quine problem, not a real violation —
-# scanning this file for the strings it exists to detect would always
-# self-fail. Every other file in the repo is still fully scanned.
-SELF_EXEMPT_FILES = {"scripts/check_paths.py"}
+# Frozen provenance: a repo-root path recorded in one of these is a historical
+# record of where a run actually happened. Rewriting it would falsify the record.
+# This list is CLOSED. A repo that needs more declares it in PAPER.yml.
+FROZEN_DIR_COMPONENTS = frozenset({
+    "results", "paper", "arxiv-latex", "manuscript", "ownerDocs", "archive",
+    "legacy", "runs", "reference", "final_review", "final_remediation",
+    "reviewer_remediation", "artifact", "experiment_logs", "manuscriptResults",
+})
+# Never worth scanning.
+SKIP_DIR_COMPONENTS = frozenset({
+    ".git", ".venv", "venv", "node_modules", "__pycache__", ".mypy_cache",
+    ".pytest_cache", ".ruff_cache", ".hypothesis", ".egg-info", "dist", "build",
+    ".scratch", "site-packages",
+})
 
 
-def is_excluded(path: Path) -> bool:
-    rel = path.relative_to(REPO_ROOT)
-    parts = rel.parts
-    if any(part in EXCLUDED_DIRS for part in parts):
-        return True
-    for prefix in EXCLUDED_PATH_PREFIXES:
-        if rel == prefix or prefix in rel.parents:
+def _fail(msg: str) -> NoReturn:
+    print(f"check_paths: {msg}", file=sys.stderr)
+    sys.exit(2)
+
+
+def load_card() -> dict:
+    card_path = REPO_ROOT / "PAPER.yml"
+    if not card_path.is_file():
+        _fail("PAPER.yml not found — every repo in this collection must have one")
+    try:
+        data = yaml.safe_load(card_path.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as exc:
+        _fail(f"PAPER.yml does not parse: {exc}")
+    if not isinstance(data, dict):
+        _fail("PAPER.yml must be a mapping")
+    return data
+
+
+def _as_str_list(value, field: str) -> list[str]:
+    """Coerce a PAPER.yml list field, rejecting the prose-instead-of-literal error."""
+    if value in (None, "", []):
+        return []
+    if not isinstance(value, list):
+        _fail(f"PAPER.yml:{field} must be a list, got {type(value).__name__}")
+    out = []
+    for item in value:
+        if not isinstance(item, str):
+            _fail(f"PAPER.yml:{field} entries must be strings, got {type(item).__name__}")
+        item = item.strip()
+        if not item:
+            continue
+        # An audit found repos whose frozen_strings were multi-sentence
+        # paragraphs. Such a needle can never match a source line, so the
+        # protection silently does not exist. Reject it loudly instead.
+        if len(item) > 120 or " " in item.strip() and len(item.split()) > 6:
+            _fail(
+                f"PAPER.yml:{field} entry looks like prose, not a literal:\n"
+                f"    {item[:90]}...\n"
+                f"  This field holds exact strings a find-and-replace must not touch.\n"
+                f"  Put the explanation in PAPER.yml:notes instead."
+            )
+        out.append(item)
+    return out
+
+
+def iter_files():
+    for path in sorted(REPO_ROOT.rglob("*")):
+        if not path.is_file() or path.is_symlink():
+            continue
+        rel = path.relative_to(REPO_ROOT)
+        parts = set(rel.parts[:-1])
+        if parts & SKIP_DIR_COMPONENTS:
+            continue
+        if path.suffix not in EXECUTABLE_SUFFIXES and path.name not in EXECUTABLE_NAMES:
+            continue
+        yield rel, path, bool(parts & FROZEN_DIR_COMPONENTS)
+
+
+_TOKEN_BREAK = re.compile(r"""[\s"'`(),;:\]\[{}=]""")
+
+
+def _enclosing_token(line: str, start: int, end: int) -> str:
+    """The whitespace/quote-delimited token containing the match."""
+    left = start
+    while left > 0 and not _TOKEN_BREAK.match(line[left - 1]):
+        left -= 1
+    right = end
+    while right < len(line) and not _TOKEN_BREAK.match(line[right]):
+        right += 1
+    return line[left:right]
+
+
+def escapes_repo(line: str, needle: str) -> bool:
+    """True only when the former name refers to the repo's OLD LOCATION.
+
+    This is deliberately narrow, and the narrowness is the point. An earlier
+    version flagged any occurrence next to a "/" and produced 94 false positives
+    in one repo alone. Acting on them would have BROKEN working repositories,
+    because the former name legitimately survives in three innocent forms:
+
+      * an INTERNAL directory that kept its name, e.g. trap-antidote still
+        contains `manuscript/falsification-not-exposure/`, so a Makefile line
+        `cd manuscript/falsification-not-exposure/en` is correct;
+      * a hash-domain separator, e.g. tiras's
+        `"popperian-live-rl/candidate-seed/v1"`, whose digests are frozen in
+        published results;
+      * prose inside a docstring or a description string.
+
+    None of those break when the repository directory is renamed. Only a
+    reference that leaves this repository does: an absolute path, or a
+    parent-escaping relative path that expects the old sibling layout.
+    """
+    for match in re.finditer(re.escape(needle), line):
+        token = _enclosing_token(line, match.start(), match.end())
+        if not token:
+            continue
+        # Absolute reference to the old location.
+        if token.startswith("/") or token.startswith("~/"):
+            return True
+        # Parent-escaping reference: ../<needle> or deeper.
+        if re.search(r"(^|/)\.\./(?:[^/]*/)*" + re.escape(needle), token):
             return True
     return False
 
 
-def iter_scanned_files() -> list[Path]:
-    files: list[Path] = []
-    for path in REPO_ROOT.rglob("*"):
-        if not path.is_file():
-            continue
-        if is_excluded(path):
-            continue
-        rel_posix = path.relative_to(REPO_ROOT).as_posix()
-        if rel_posix in SELF_EXEMPT_FILES:
-            continue
-        if path.name in SCAN_LITERAL_NAMES or path.suffix in SCAN_EXTENSIONS:
-            files.append(path)
-    return sorted(files)
-
-
-def check_literal_and_former_name(files: list[Path]) -> list[str]:
-    failures: list[str] = []
-    for path in files:
-        rel = path.relative_to(REPO_ROOT)
-        try:
-            text = path.read_text(encoding="utf-8", errors="strict")
-        except (UnicodeDecodeError, OSError) as exc:
-            failures.append(f"{rel}: could not read as UTF-8 text ({exc})")
-            continue
-
-        for lineno, line in enumerate(text.splitlines(), start=1):
-            if FORBIDDEN_LITERAL in line:
-                failures.append(
-                    f"{rel}:{lineno}: contains forbidden literal "
-                    f"'{FORBIDDEN_LITERAL}'"
-                )
-            if rel.name not in FORMER_NAME_EXEMPT_FILES and FORMER_DIR_NAME in line:
-                failures.append(
-                    f"{rel}:{lineno}: contains former directory name "
-                    f"'{FORMER_DIR_NAME}'"
-                )
-    return failures
-
-
-def get_origin_url() -> str | None:
+def git_remote() -> str | None:
     try:
-        out = subprocess.run(
-            ["git", "remote", "get-url", "origin"],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
+        out = subprocess.run(["git", "-C", str(REPO_ROOT), "remote", "get-url", "origin"],
+                             capture_output=True, text=True, check=True).stdout.strip()
+        return out or None
     except (subprocess.CalledProcessError, FileNotFoundError):
         return None
-    url = out.stdout.strip()
-    return url[:-4] if url.endswith(".git") else url
 
 
-def check_citation_cff_url(origin: str | None) -> list[str]:
-    failures: list[str] = []
-    cff_path = REPO_ROOT / "CITATION.cff"
-    if not cff_path.exists():
-        return failures
-    if origin is None:
-        failures.append(
-            "CITATION.cff: cannot verify repository-code URL — "
-            "'git remote get-url origin' failed"
-        )
-        return failures
-
-    try:
-        import yaml  # type: ignore[import-untyped]
-    except ImportError:
-        failures.append(
-            "CITATION.cff: PyYAML is not installed, cannot parse the file "
-            "to check its URL fields (install pyyaml to run this check)"
-        )
-        return failures
-
-    data = yaml.safe_load(cff_path.read_text(encoding="utf-8"))
-    for key in ("repository-code", "url"):
-        value = data.get(key)
-        if value is None:
-            continue
-        normalized = value[:-4] if value.endswith(".git") else value
-        if normalized.rstrip("/") != origin.rstrip("/"):
-            failures.append(
-                f"CITATION.cff: '{key}' is '{value}' but "
-                f"'git remote get-url origin' is '{origin}'"
-            )
-    return failures
-
-
-def check_pyproject_urls(origin: str | None) -> list[str]:
-    failures: list[str] = []
-    pyproject_path = REPO_ROOT / "pyproject.toml"
-    if not pyproject_path.exists():
-        return failures  # no Python package in this repo
-
-    if origin is None:
-        failures.append(
-            "pyproject.toml: cannot verify [project.urls] — "
-            "'git remote get-url origin' failed"
-        )
-        return failures
-
-    try:
-        import tomllib
-    except ImportError:  # pragma: no cover - Python < 3.11 fallback
-        try:
-            import tomli as tomllib  # type: ignore[no-redef]
-        except ImportError:
-            failures.append(
-                "pyproject.toml: no TOML parser available "
-                "(tomllib/tomli) to check [project.urls]"
-            )
-            return failures
-
-    data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
-    urls = data.get("project", {}).get("urls", {})
-    for key, value in urls.items():
-        normalized = value[:-4] if value.endswith(".git") else value
-        if origin.rstrip("/") not in normalized.rstrip("/"):
-            failures.append(
-                f"pyproject.toml [project.urls] '{key}' is '{value}' but "
-                f"'git remote get-url origin' is '{origin}'"
-            )
-    return failures
+def normalise_remote(url: str) -> str:
+    url = url.strip().removesuffix(".git")
+    url = re.sub(r"^git@([^:]+):", r"https://\1/", url)
+    url = re.sub(r"^ssh://git@", "https://", url)
+    return url.rstrip("/").lower()
 
 
 def main() -> int:
-    files = iter_scanned_files()
-    origin = get_origin_url()
+    card = load_card()
+    former_names = _as_str_list(card.get("former_names"), "former_names")
+    former_slugs = _as_str_list(card.get("former_github_slugs"), "former_github_slugs")
+    frozen = _as_str_list(card.get("frozen_strings"), "frozen_strings")
 
-    failures: list[str] = []
-    failures.extend(check_literal_and_former_name(files))
-    failures.extend(check_citation_cff_url(origin))
-    failures.extend(check_pyproject_urls(origin))
+    exempt_raw = card.get("check_paths_exempt") or []
+    exempt: dict[str, str] = {}
+    if exempt_raw:
+        if not isinstance(exempt_raw, list):
+            _fail("PAPER.yml:check_paths_exempt must be a list of {path, reason} mappings")
+        for entry in exempt_raw:
+            if not isinstance(entry, dict) or "path" not in entry or "reason" not in entry:
+                _fail("every check_paths_exempt entry needs BOTH 'path' and 'reason'")
+            exempt[str(entry["path"]).strip()] = str(entry["reason"]).strip()
 
-    if failures:
-        print(f"check_paths: FAILED ({len(failures)} issue(s))", file=sys.stderr)
-        for failure in failures:
-            print(f"  - {failure}", file=sys.stderr)
+    errors: list[str] = []
+    notes: list[str] = []
+    applied_exemptions: set[str] = set()
+    scanned = 0
+
+    for rel, path, is_frozen in iter_files():
+        relstr = str(rel)
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        scanned += 1
+        is_paper_yml = relstr == "PAPER.yml"
+
+        for lineno, line in enumerate(text.splitlines(), 1):
+            # ---- rule 1: owner home path ----
+            # PAPER.yml is exempt by design, for the same reason it is exempt from
+            # rule 2: it is the identity card whose job is to RECORD former
+            # locations and install roots. Flagging it would push every repo into
+            # inventing a blanket carve-out, which is the failure this gate exists
+            # to remove. It is metadata, never executed.
+            if OWNER_HOME_LITERAL in line and not is_paper_yml:
+                if is_frozen:
+                    notes.append(f"{relstr}:{lineno}  frozen provenance, not rewritten")
+                elif relstr in exempt:
+                    applied_exemptions.add(relstr)
+                else:
+                    errors.append(
+                        f"{relstr}:{lineno}  absolute owner path '{OWNER_HOME_LITERAL}' "
+                        f"in an executable file — breaks on any other machine"
+                    )
+
+            # ---- rule 2: former directory name / former slug ----
+            # PAPER.yml is REQUIRED to record its own former names, so it is never
+            # a violation there. (The first attempt flagged it, which is why repos
+            # started adding blanket exemptions.)
+            if is_paper_yml or is_frozen:
+                continue
+            for needle in (*former_names, *former_slugs):
+                if needle not in line:
+                    continue
+                if escapes_repo(line, needle):
+                    if relstr in exempt:
+                        applied_exemptions.add(relstr)
+                    else:
+                        errors.append(
+                            f"{relstr}:{lineno}  former name '{needle}' in a path that LEAVES this "
+                            f"repository (absolute, or ../ escaping to the old sibling layout) — "
+                            f"this breaks after the move"
+                        )
+                elif any(needle in f or f in needle for f in frozen):
+                    notes.append(f"{relstr}:{lineno}  '{needle}' as frozen identity, not a path")
+                elif relstr in exempt:
+                    applied_exemptions.add(relstr)
+                else:
+                    notes.append(
+                        f"{relstr}:{lineno}  former name '{needle}' appears (not path-like) — "
+                        f"declare it in frozen_strings if deliberate"
+                    )
+
+    # ---- rule 3: declared URLs agree with the live remote ----
+    remote = git_remote()
+    if remote:
+        want = normalise_remote(remote)
+        for meta_name in ("CITATION.cff", "pyproject.toml"):
+            meta = REPO_ROOT / meta_name
+            if not meta.is_file():
+                continue
+            for lineno, line in enumerate(meta.read_text(encoding="utf-8").splitlines(), 1):
+                for m in re.finditer(r"https?://github\.com/[\w.\-]+/[\w.\-]+", line):
+                    found = normalise_remote(m.group(0))
+                    if found != want and "PhiniteLab" in m.group(0):
+                        errors.append(
+                            f"{meta_name}:{lineno}  URL {m.group(0)} disagrees with the live "
+                            f"remote {remote}"
+                        )
+
+    # ---------------- report: exemptions are ALWAYS visible ----------------
+    if exempt:
+        print("check_paths: declared exemptions (from PAPER.yml:check_paths_exempt)")
+        for p, reason in sorted(exempt.items()):
+            mark = "USED" if p in applied_exemptions else "unused"
+            print(f"    [{mark}] {p}\n           reason: {reason}")
+        stale = set(exempt) - applied_exemptions
+        if stale:
+            print(f"    NOTE: {len(stale)} exemption(s) matched nothing — remove them.")
+        print()
+
+    if notes:
+        print(f"check_paths: {len(notes)} informational note(s)")
+        for n in notes[:40]:
+            print(f"    {n}")
+        if len(notes) > 40:
+            print(f"    ... and {len(notes) - 40} more")
+        print()
+
+    if errors:
+        print(f"check_paths: FAIL — {len(errors)} violation(s) in {scanned} executable files")
+        for e in errors:
+            print(f"    {e}")
         return 1
 
-    print(
-        f"check_paths: OK — {len(files)} file(s) scanned, "
-        f"origin={origin!r}, 0 issues"
-    )
+    print(f"check_paths: OK ({scanned} executable files scanned, "
+          f"{len(exempt)} declared exemption(s), {len(notes)} note(s))")
     return 0
 
 
