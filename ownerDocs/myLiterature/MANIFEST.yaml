@@ -1,0 +1,24 @@
+# Literature corpus manifest — the repository-wide PDF pool.
+#
+# CONTRACT (article pipeline, PIPELINE.md § 9 item 4 and RUN.yaml `pdfManifest`):
+#   - this file is TRACKED; the PDFs beside it in pdfs/ are GITIGNORED.
+#     It is therefore the only record that survives a fresh clone, and the only thing
+#     that makes the corpus re-downloadable.
+#   - one entry per PDF. A PDF with no entry here is invisible to every later step:
+#     it cannot be cited, cannot be re-downloaded, and will not appear in any review.
+#   - `usedBy` lists the run slugs that draw on that source, so a second article reusing
+#     the pool adds its slug rather than re-downloading the paper.
+#
+# Add an entry with the shape below; keep the list sorted by `file`.
+
+entries: []
+
+# entries:
+#   - file: author_year_short-title.pdf
+#     title: "Title exactly as printed on page 1"
+#     authors: "Family N., Family N."
+#     venue: "Journal or conference, year"
+#     doi: 10.xxxx/xxxxx          # or arxiv: 2501.xxxxx
+#     role: "what this source does in this repository's argument"
+#     usedBy: [slug-a, slug-b]
+#     pages: 12

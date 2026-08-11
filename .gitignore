@@ -26,3 +26,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+
+# Literature PDF corpus — re-downloadable from
+# ownerDocs/myLiterature/MANIFEST.yaml, which STAYS tracked.
+**/myLiterature/pdfs/*.pdf
