@@ -1,7 +1,7 @@
 # Repository context
 
 **One page that orients an agent before it reads anything else in this repository.**
-Read after `ownerDocs-Rules.md`, before touching code or manuscripts.
+Read after `README.md` — the workspace area map — before touching code or manuscripts.
 
 > Owner-owned and repository-specific. The template ships this file EMPTY; the scaffold
 > creates it once and never overwrites it, and `--sync` never touches it. Fill it in your

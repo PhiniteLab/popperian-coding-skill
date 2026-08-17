@@ -1,36 +1,84 @@
-# myResearch — the owner's research inputs, and the article run roots
+# Research Inputs and Work Units
 
-Two kinds of thing live here, and they do not mix.
+## Purpose
 
-## 1. Free-standing owner inputs (flat files)
+This area stores owner-provided research inputs and scoped research work units. A work unit
+may be a manuscript, project, technical report, method-development effort, course design, or
+other bounded research activity.
 
-Deep-research reports, prompt outputs, idea dumps, the LLM-written versions of methods the
-owner developed. Numbered by arrival: `deep-research-report-1.md`, `prompt-output-3.md`.
-These are **owner-authored ground truth** — an agent reads them and never edits them.
+## Scope and Boundaries
 
-## 2. Article run roots (`<slug>/`)
+### Owns
 
-The S00–S16 article research pipeline opens **one run root per article idea**, and
-everything belonging to that work lives inside it:
+- Owner-authored notes, deep-research outputs, prompt outputs, and idea records.
+- One resumable root per scoped work unit.
+- Work-unit state, evidence ledger, and editable draft when the active workflow requires it.
 
+### Does Not Own
+
+- Repository-wide literature metadata.
+- Executable experiment definitions or generated run artefacts.
+- Current repository status or settled decisions.
+- Global pipeline rules copied from an external toolchain.
+
+## Inputs and Outputs
+
+| Direction | Item | Source or Consumer | Contract |
+|---|---|---|---|
+| Input | Owner research input | Owner | Read-only unless the owner explicitly requests revision |
+| Input | Workflow goal | Owner or approved workflow | Preserved verbatim in the work-unit state |
+| Output | Scoped work unit | Manuscript, project, or report workflow | One slug, one bounded objective |
+| Output | Draft and evidence ledger | Owner and reviewers | Traceable to sources and run evidence |
+
+## Structure and Key Elements
+
+```text
+myResearch/
+  inputs/                    # owner inputs; create files as IN-001-<slug>.md
+  <work-slug>/
+    RUN.yaml                 # workflow state and work type
+    evidence/
+      LEDGER.md              # evidence chain
+    draft/                   # editable work product
 ```
-myResearch/<slug>/
-  RUN.yaml              # the run state: active step, goal contract, carry-outputs
-  evidence/
-    LEDGER.md           # the evidence chain — one row per step
-    <per-step evidence files>
-  draft/                # the manuscript being built
+
+Suggested owner-input identity block:
+
+```markdown
+# <Input Title>
+
+- **ID:** IN-001
+- **Date:** YYYY-MM-DD
+- **Type:** owner note | research output | call analysis | other
+- **Status:** raw | reviewed | incorporated
+- **Related work:** <work-slug> | none
 ```
 
-Conventions that make a run resumable:
+## Interfaces and Flow
 
-- **One slug = one article = one root.** A second idea gets a second slug, never a branch
-  inside an existing root.
-- `RUN.yaml → active` names the step the run is on. It is the only place that says so.
-- `goal.raw` is the owner's own sentence, copied verbatim and never rewritten.
-- The run root is created by the pipeline, not by the scaffold — this workspace only
-  guarantees that `myResearch/` exists for it to open into.
+Owner inputs may inform literature review, method development, work-unit drafts, and
+scientific decisions. Work units consume repository-wide literature from
+`ownerDocs/myLiterature/` and evidence from `artifacts/`; they do not duplicate either.
 
-The pipeline's ruleset (step files, `RUN.yaml`/`LEDGER.md` templates) is **not** copied
-here: it lives outside every repository as a single source of truth, and the run reads it
-step by step. See the `article-research-pipeline` skill.
+## Configuration, Data, and State
+
+- `one slug = one scoped research work unit`.
+- `RUN.yaml` is the only work-unit state file when an external workflow uses it.
+- `work_type` should identify the unit, for example `manuscript`, `project`,
+  `technical_report`, or `course_design`.
+- Owner-input files use stable `IN-` IDs and descriptive filenames.
+
+## Validation and Failure Handling
+
+| Concern | Validation | Failure Handling |
+|---|---|---|
+| Two objectives share one work root | Work-unit scope audit | Split into separate slugs |
+| Owner input is edited silently | Ownership audit | Restore original and create a derived note elsewhere |
+| Draft cites untracked evidence | Evidence-link audit | Mark unsupported until linked |
+| State is duplicated outside `RUN.yaml` | State audit | Retain one canonical state record |
+
+## Maintenance and Related Documentation
+
+Update this README only when the work-unit contract changes. Current work belongs in
+`ownerDocs/STATUS.md`; literature belongs in `ownerDocs/myLiterature/`; scientific outcomes
+belong in `ownerDocs/myProgression/`.

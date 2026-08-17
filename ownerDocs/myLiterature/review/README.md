@@ -1,23 +1,63 @@
-# myLiterature/review — consolidated literature reviews
+# Literature Reviews
 
-**Claude writes here; the owner evaluates.** These are syntheses of the corpus recorded in
-`../MANIFEST.yaml`, not summaries of individual papers.
+## Purpose
 
-## Shape
+This area stores traceable syntheses of the literature corpus. Reviews compare method
+families, assumptions, models, protocols, guarantee levels, limitations, and open problems;
+they are not chronological lists of paper summaries.
 
-- Repository-wide reviews sit directly in this folder, ordered by an `NN-` prefix
-  (`00-priority-monitor-register.md`, `01-...`) so the file order is the reading order.
-- A review belonging to one article run goes in `review/<slug>/`, matching the run root
-  the pipeline opened at `myResearch/<slug>/`.
+## Scope and Boundaries
 
-## Rules
+### Owns
 
-- **Every claim traces to a manifest entry.** A source that is cited here but absent from
-  `../MANIFEST.yaml` is a broken review, not a minor omission — the manifest is what makes
-  the corpus re-downloadable, so an untracked source is one nobody can check.
-- **Synthesize by method family, assumption set, guarantee level and open problem** — never
-  as a chronological list of papers. A list is not a review.
-- **Never cite a paper that was not read.** A source seen only as a title or abstract is
-  recorded as exactly that, with its verification status stated.
-- **Do not delete a superseded review.** Add the new one with the next number; the earlier
-  round is the baseline a later one is compared against.
+- Repository-wide literature syntheses.
+- Work-specific review folders keyed by work slug.
+- Source-supported comparison matrices and research-gap analyses.
+
+### Does Not Own
+
+- Unmanifested sources.
+- Manuscript sections copied from a review.
+- Method specifications or experimental results.
+- Claims supported only by title or abstract when full-text evidence is required.
+
+## Inputs and Outputs
+
+| Direction | Item | Source or Consumer | Contract |
+|---|---|---|---|
+| Input | Manifested source | `../MANIFEST.yaml` | Referenced by stable `L-` ID |
+| Input | Verified source content | Corpus reviewer | Verification state remains explicit |
+| Output | Synthesis | Methods, projects, manuscripts | Every factual claim traces to source IDs |
+| Output | Research gap | Owner and method workflow | Conditions and limitations are explicit |
+
+## Structure and Key Elements
+
+- Repository-wide syntheses live directly in this folder.
+- Work-specific syntheses live in `review/<work-slug>/`.
+- Numbered prefixes may be used when a fixed reading order is required.
+- Superseded reviews remain available as the comparison baseline.
+
+## Interfaces and Flow
+
+A review consumes only manifested sources and produces a synthesis that can inform method
+specifications, hypotheses, project objectives, and manuscript framing. It never converts a
+low-verification source into a high-confidence claim.
+
+## Configuration, Data, and State
+
+This area has no runtime configuration. Source identity and verification state are read from
+`../MANIFEST.yaml`. Review files use repository-relative links and stable source IDs.
+
+## Validation and Failure Handling
+
+| Concern | Validation | Failure Handling |
+|---|---|---|
+| Review cites unknown `L-` ID | Source-reference check | Mark claim unsupported |
+| Literature is listed paper by paper | Synthesis-quality review | Restructure by method family or assumption set |
+| Verification level is omitted | Evidence audit | Add the exact status |
+| Superseded review is deleted | History audit | Restore from Git and add a new review instead |
+
+## Maintenance and Related Documentation
+
+Update a review when the corpus or interpretation changes. Do not rewrite scientific history
+silently; preserve earlier syntheses when they are needed as review baselines.

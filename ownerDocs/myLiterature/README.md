@@ -1,39 +1,97 @@
-# myLiterature — the repository-wide literature pool
+# Literature Corpus
 
-**Shared across every article run in this repository.** A second `<slug>` does not get a
-second corpus; it reuses this one and records its use in the manifest. Nothing here is
-run-specific except the per-slug reading-note folder.
+## Purpose
 
-```
+This area maintains the repository-wide scientific source corpus, source verification state,
+and literature syntheses. It is shared across work units; reused sources are referenced by
+stable literature IDs rather than duplicated.
+
+## Scope and Boundaries
+
+### Owns
+
+- One manifest entry per local or remotely referenced source.
+- Local PDFs under `pdfs/` when the owner provides them.
+- Verification state, provenance, checksum, and source role.
+- Repository-wide and work-specific literature syntheses under `review/`.
+
+### Does Not Own
+
+- Manuscript prose or method specifications.
+- Unverified bibliographic claims.
+- Generated experimental evidence.
+- Public redistribution rights for licensed PDFs.
+
+## Inputs and Outputs
+
+| Direction | Item | Source or Consumer | Contract |
+|---|---|---|---|
+| Input | PDF or source metadata | Owner or verified retrieval workflow | One manifest entry per source |
+| Input | Reading status | Reviewer | Explicit verification level |
+| Output | Literature manifest | Methods, reviews, and manuscripts | Stable `L-` IDs and traceable metadata |
+| Output | Literature synthesis | Owner and work units | Organised by method family, assumptions, guarantees, and gaps |
+
+## Structure and Key Elements
+
+```text
 myLiterature/
-  MANIFEST.yaml         # TRACKED — one entry per PDF: bibliographic record, DOI, usedBy: [slug…]
+  MANIFEST.yaml
   pdfs/
-    *.pdf               # GITIGNORED — the corpus itself, never committed
   review/
-    <slug>/             # work-specific reading notes for one run
-    *.md                # repository-wide syntheses (priority monitors, source matrices)
+    README.md
+    <repository-wide synthesis>.md
+    <work-slug>/
 ```
 
-Paths and file names follow the article ruleset (`PIPELINE.md` § 9 item 4; `RUN.yaml`
-declares `pdfManifest: ownerDocs/myLiterature/MANIFEST.yaml`). They are a contract, not a
-preference — a run that cannot find `MANIFEST.yaml` at that exact path cannot resolve its
-own corpus.
+Verification states:
 
-## The manifest is the contract
+```text
+metadata_only
+abstract_reviewed
+full_text_reviewed
+full_text_verified
+```
 
-`pdfs/*.pdf` is excluded by `**/myLiterature/pdfs/*.pdf` in the repository's `.gitignore`,
-so the PDFs never enter git. `MANIFEST.yaml` **does**, and it is therefore the only record
-that survives a fresh clone. A PDF with no entry is invisible to every later step: it
-cannot be cited, cannot be re-downloaded, and will not appear in any review.
+## Interfaces and Flow
 
-Each entry carries the file name, the title as printed on page 1, the venue and year, the
-DOI or arXiv id, the role that source plays in this repository's argument, and `usedBy` —
-the run slugs that draw on it. `usedBy` is what makes the pool cumulative: a second article
-that needs the same paper appends its slug instead of re-downloading it.
+```mermaid
+flowchart LR
+    S["Source or PDF"]
+    M["MANIFEST.yaml"]
+    R["Literature Review"]
+    H["Method or Hypothesis"]
+    T["Traceability"]
+    O["Manuscript or Project Output"]
 
-## Reviews
+    S -->|"is registered in"| M
+    M -->|"provides stable source IDs"| R
+    R -->|"supports or challenges"| H
+    H -->|"is linked through"| T
+    T -->|"supports"| O
+```
 
-`review/` holds the syntheses an agent writes and the owner evaluates. Every claim in a
-review traces back to a manifest entry — a review sentence with no traceable source is a
-defect, not a shortcut. Per-run reading notes live in `review/<slug>/`; repository-wide
-syntheses sit directly in `review/`.
+## Configuration, Data, and State
+
+- `MANIFEST.yaml` is tracked.
+- Local PDFs are not committed by default.
+- Filenames are repository-relative and descriptive.
+- `used_by` records the work units that consume a source.
+- `sha256` is required when a local PDF exists and may be `null` otherwise.
+- `source_url` or another stable retrieval identifier should be provided when available.
+
+## Validation and Failure Handling
+
+| Concern | Validation | Failure Handling |
+|---|---|---|
+| Local PDF lacks a manifest entry | Manifest coverage check | Source is unavailable to downstream workflows |
+| Duplicate literature ID | ID uniqueness check | Fail until one ID is reassigned |
+| Strong claim relies on weak verification | Verification-state audit | Warn and require full-text review |
+| Metadata or DOI is unverified | Metadata audit | Mark explicitly; never fabricate |
+| Review uses unknown source ID | Cross-reference check | Treat the review claim as unsupported |
+
+## Maintenance and Related Documentation
+
+- Add or update the manifest whenever a source is introduced or re-verified.
+- Never delete a source silently; record replacement or invalidation in the relevant review.
+- Literature syntheses follow `review/README.md`.
+- Active source-to-claim relationships are recorded in `REPO-INFO/TRACEABILITY.md`.
